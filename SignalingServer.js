@@ -32,7 +32,7 @@ function originIsAllowed(origin) {
   return true;
 }
 
-var client_manager = [ ];
+var client = [ ];
 var server_manager = [ ];
 
 wsServer.on('request', function(request) {
@@ -45,36 +45,125 @@ wsServer.on('request', function(request) {
 	    try{
 			var data = sjson.parse(message.utf8Data, { protoAction: 'remove', constructorAction: 'remove' });
 
-			if (typeof data.t !== 'undefined') {
-				if(data.t>-1 && data.t<5){
+			if (typeof data.type !== 'undefined') {
+				//if(data.t>-1 && data.t<5){
 
-					switch(data.t) { 
-						case 0: 
+					switch(data.type) { 
+						/*case 0: // from MasterServerData.js
+							// add registration of MasterServerData.js 
+							// in server_manager[connection.name] = connection;
+			                // with peerCount = 0 it means NO clients connected to yet
+			                
 			                connection.name = crypto.randomBytes(20).toString('hex');
 			                server_manager[connection.name] = connection;
 			                server_manager[connection.name].peerCount = 0;
 			                var msg = { 
-			                    t: 0, 
-			                    n: connection.name, 
-			                    s: 1 
+			                    type: 0, 
+			                    name: connection.name, 
+			                    state: 1 
 			                };
 			                server_manager[connection.name].sendUTF(JSON.stringify(msg));
 							break;
+*/
+						case "server":
+			            	var conn = client[data.name];
+							if(conn != null) {
+				                var msg = { 
+				                    type: "logined", 
+				                    name: "", 
+				                    state: true 
+				                };
+			                	conn.sendUTF(JSON.stringify(msg));
+			                }else{
+			                	var name = crypto.randomBytes(20).toString('hex');
+			                	connection.name = name;
+			                	connection.loginAs = "s";
 
-						case 1: 
-			                //if anyone is logged in with this username then refuse 
-			                var msg;
+			                	client[name] = connection; 
+			                	server_manager.push(name);
+			                	var msg = { 
+				                    type: "logined", 
+				                    name: name, 
+				                    state: true 
+				                };
+			                	connection.sendUTF(JSON.stringify(msg));
+			                }
+			                break;
+						case "login":
+			            	var conn = client[data.name];
+							if(conn != null) {
+				                var msg = { 
+				                    type: "logined",
+				                    name: "", 
+				                    state: true 
+				                };
+			                	client[data.name].sendUTF(JSON.stringify(msg));
+			                }else{
+			                	var name = crypto.randomBytes(20).toString('hex');
+			                	connection.name = name;
+			                	connection.loginAs = "c";
+			                	client[name] = connection; 
+			                	var msg = { 
+				                    type: "logined", 
+				                    name: name, 
+				                    state: true 
+				                };
+			                	connection.sendUTF(JSON.stringify(msg));
+			                }
+			                break;
+
+			            case "offer": 
+			            	// a client want to create offer to MasterServerData.js
+			            	var msd_name = server_manager[0];
+			            	var conn = client[msd_name]; 
+							if(conn != null) {
+				                var msg = { 
+				                    type: "offer", 
+				                    name: connection.name,
+				                    offer: data.offer
+				                };
+				                conn.sendUTF(JSON.stringify(msg));
+							}
+			                break;
+			                
+			            case "answer": 
+			            	var conn = client[data.name]; 
+							if(conn != null) {
+				                var msg = { 
+				                    type: "answer", 
+				                    name: connection.name,
+				                    answer: data.answer
+				                };
+				                conn.sendUTF(JSON.stringify(msg));
+							}
+			                break;
+
+			            case "candidate": 
+				            var conn = client[data.name];
+							if(conn != null) {
+					            var msg = { 
+					                    type: "candidate", 
+					                    name: connection.name,
+					                    candidate: data.candidate
+					            };
+					            conn.sendUTF(JSON.stringify(msg));
+			            	}
+			                break;
+
+			            case "leave": 
+			                /*var msg;
 			                connection.name = crypto.randomBytes(20).toString('hex');  
 			                client_manager[connection.name] = connection;
 			                var msg = { 
-			                    t: 1, 
-			                    n: connection.name, 
-			                    s: true 
+			                    type: "leave", 
+			                    name: connection.name,
+			                    answer: data.leave
 			                };
-			                client_manager[connection.name].sendUTF(JSON.stringify(msg));
+			                client_manager[connection.name].sendUTF(JSON.stringify(msg));*/
 			                break;
 
-						case 2: 
+
+						/*case 2: 
 							var d = 100, g;
 							
 							Object.keys(server_manager).forEach(function(x){
@@ -107,17 +196,16 @@ wsServer.on('request', function(request) {
 											var conn = client_manager[data.n];  
 											if(client_manager[data.n] != null) { 
 												client_manager[data.n].sendUTF(message.utf8Data);
-											} 
+											}
 										}
 									}
 								}
-
 							}
 							
 							
-			            	break;
+			            	break;*/
 					}
-				}
+				//}
 			}
 		} catch (err){
 			console.log(err);
